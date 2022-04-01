@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "clone-all-from-org"
-version = "0.0.0"
+version = "0.1.0"
 description = "CLI tool to clone all repos from a given organization or user"
 authors = ["Michael Twomey <mick@twomeylee.name>"]
 license = "MIT"
