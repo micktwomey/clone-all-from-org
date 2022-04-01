@@ -2,6 +2,7 @@ import asyncio
 import logging
 import pathlib
 import typing
+import urllib.parse
 
 import structlog
 import structlog.contextvars
@@ -15,7 +16,11 @@ app = typer.Typer()
 
 
 async def mainloop(
-    prefix: pathlib.Path, groups: list[Group], oauth_token: str, no_act: bool
+    prefix: pathlib.Path,
+    groups: list[Group],
+    oauth_token: str,
+    no_act: bool,
+    base_url: str,
 ) -> None:
     await clone_all_from_groups(
         groups,
@@ -23,6 +28,7 @@ async def mainloop(
         oauth_token,
         prefix,
         no_act,
+        base_url,
     )
 
 
@@ -31,10 +37,14 @@ def main(
     groups: list[str] = typer.Argument(
         ...,
         metavar="group",
-        help="Users or organizations to clone from. Use user:name or org:name.",
+        help="Users or organizations to clone from. Use user:name, me or org:name.",
     ),
     prefix: str = typer.Option(
         "~/src", help="Prefix to clone to. Will clone to `{prefix}/{host}/{org}/{repo}`"
+    ),
+    base_url: str = typer.Option(
+        "https://api.github.com",
+        help="GitHub base API URL to talk to. Change to use GitHub enterprise servers.",
     ),
     verbose: bool = typer.Option(
         False, "--verbose/--no-verbose", "-v", help="Enable more verbose log output"
@@ -66,11 +76,22 @@ def main(
         gh_config_path = pathlib.Path("~/.config/gh/hosts.yml").expanduser().resolve()
         if not gh_config_path.is_file():
             raise ValueError(
-                "Neither CLONE_ALL_FROM_ORG_OAUTH_TOKEN is present in env nor ~/.config/gh/hosts.yml readable from gh client."
+                f"Neither CLONE_ALL_FROM_ORG_OAUTH_TOKEN is present in env nor {gh_config_path} readable from gh client."
             )
+        host = urllib.parse.urlparse(base_url).hostname
+        if host is None:
+            raise ValueError(f"Can't figure out hostname from {base_url}")
         with gh_config_path.open("rb") as fp:
             gh_config = yaml.safe_load(fp)
-            oauth_token = gh_config["github.com"]["oauth_token"]
+            if host not in gh_config and host.startswith("api."):
+                # try dropping the api.
+                host = host[len("api.") :]
+            try:
+                oauth_token = gh_config[host]["oauth_token"]
+            except KeyError:
+                raise ValueError(
+                    f"Can't find a valid oauth_token for {base_url} in {gh_config_path}, try a 'gh auth login' to authenticate or check your base url."
+                )
 
     clone_prefix = pathlib.Path(prefix).expanduser().resolve()
 
@@ -110,9 +131,18 @@ def main(
         no_act=no_act,
         groups=len(groups),
         oauth_token="*" * len(oauth_token),
+        base_url=base_url,
     )
 
-    asyncio.run(mainloop(clone_prefix, [Group(g) for g in groups], oauth_token, no_act))
+    asyncio.run(
+        mainloop(
+            clone_prefix,
+            [Group(g) for g in groups],
+            oauth_token,
+            no_act,
+            base_url,
+        )
+    )
 
 
 if __name__ == "__main__":

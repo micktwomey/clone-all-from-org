@@ -87,11 +87,14 @@ async def clone_all_from_groups(
     oauth_token: str,
     prefix: pathlib.Path,
     no_act: bool,
+    base_url: str,
 ) -> None:
     log = structlog.get_logger(requestor=requestor)
 
     async with httpx.AsyncClient() as client:
-        gh = gidgethub.httpx.GitHubAPI(client, requestor, oauth_token=oauth_token)
+        gh = gidgethub.httpx.GitHubAPI(
+            client, requestor, oauth_token=oauth_token, base_url=base_url
+        )
         async for repo in list_repos(groups, gh):
             log.debug("Found repo", repo=repo)
 
