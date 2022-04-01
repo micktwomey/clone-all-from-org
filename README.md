@@ -42,3 +42,13 @@ gitup -a ~/src/github.com
 clone-all-from-org me org:my-org
 gitup --prune
 ```
+
+# GitHub Enterprise
+
+You can override the default base URl with `--base-url`. This is most useful for accessing GitHub Enterprise servers.
+
+Typically you'd need something like `https://git.example.com/api/v3/` as a base URl for enterprise:
+
+```sh
+clone-all-from-org --base-url https://git.example.com/api/v3/ me
+```
