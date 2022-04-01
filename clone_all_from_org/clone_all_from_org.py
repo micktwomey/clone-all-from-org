@@ -67,11 +67,11 @@ async def list_repos_for_group(
 
 
 async def list_repos(
-    groups: typing.List[Group], github: gidgethub.abc.GitHubAPI
+    groups: list[Group], github: gidgethub.abc.GitHubAPI
 ) -> typing.AsyncIterable[GithubRepo]:
     """Iterate over all repos for given groups, removing duplicates"""
     log = structlog.get_logger()
-    seen_repos: typing.Set[str] = set()
+    seen_repos: set[str] = set()
     repo_generators = [list_repos_for_group(group, github) for group in groups]
     async for repo in aioitertools.itertools.chain(*repo_generators):
         if repo.full_name not in seen_repos:
@@ -82,7 +82,7 @@ async def list_repos(
 
 
 async def clone_all_from_groups(
-    groups: typing.List[Group],
+    groups: list[Group],
     requestor: str,
     oauth_token: str,
     prefix: pathlib.Path,

@@ -15,14 +15,14 @@ def isort(session: nox.Session) -> None:
     session.run("isort", "--check", ".")
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=["3.9", "3.10"])
 def mypy(session: nox.Session) -> None:
     session.install(".")
     session.install("mypy", "nox", "pytest")
     session.run("mypy", ".")
 
 
-@nox.session(python=["3.7", "3.8", "3.9", "3.10"])
+@nox.session(python=["3.9", "3.10"])
 def tests(session: nox.Session) -> None:
     session.install(".")
     session.install("pytest")

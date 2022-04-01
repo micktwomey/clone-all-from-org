@@ -1,5 +1,4 @@
 import asyncio
-from email.mime import audio
 import logging
 import pathlib
 import typing
@@ -10,13 +9,13 @@ import structlog.processors
 import typer
 import yaml
 
-from .clone_all_from_org import clone_all_from_groups, Group
+from .clone_all_from_org import Group, clone_all_from_groups
 
 app = typer.Typer()
 
 
 async def mainloop(
-    prefix: pathlib.Path, groups: typing.List[Group], oauth_token: str, no_act: bool
+    prefix: pathlib.Path, groups: list[Group], oauth_token: str, no_act: bool
 ) -> None:
     await clone_all_from_groups(
         groups,
@@ -29,7 +28,7 @@ async def mainloop(
 
 @app.command()
 def main(
-    groups: typing.List[str] = typer.Argument(
+    groups: list[str] = typer.Argument(
         ...,
         metavar="group",
         help="Users or organizations to clone from. Use user:name or org:name.",
@@ -75,7 +74,7 @@ def main(
 
     clone_prefix = pathlib.Path(prefix).expanduser().resolve()
 
-    processors: typing.List[structlog.types.Processor] = (
+    processors: list[structlog.types.Processor] = (
         [
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,

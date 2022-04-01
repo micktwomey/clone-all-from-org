@@ -1,7 +1,7 @@
+import pytest
+
 from clone_all_from_org import clone_all_from_org
 from clone_all_from_org.clone_all_from_org import Group, GroupType
-
-import pytest
 
 
 @pytest.mark.parametrize(
