@@ -70,29 +70,6 @@ def main(
 
     If the repo exists then skip.
     """
-
-    if oauth_token is None:
-        # Fish for the token from the gh client config
-        gh_config_path = pathlib.Path("~/.config/gh/hosts.yml").expanduser().resolve()
-        if not gh_config_path.is_file():
-            raise ValueError(
-                f"Neither CLONE_ALL_FROM_ORG_OAUTH_TOKEN is present in env nor {gh_config_path} readable from gh client."
-            )
-        host = urllib.parse.urlparse(base_url).hostname
-        if host is None:
-            raise ValueError(f"Can't figure out hostname from {base_url}")
-        with gh_config_path.open("rb") as fp:
-            gh_config = yaml.safe_load(fp)
-            if host not in gh_config and host.startswith("api."):
-                # try dropping the api.
-                host = host[len("api.") :]
-            try:
-                oauth_token = gh_config[host]["oauth_token"]
-            except KeyError:
-                raise ValueError(
-                    f"Can't find a valid oauth_token for {base_url} in {gh_config_path}, try a 'gh auth login' to authenticate or check your base url."
-                )
-
     clone_prefix = pathlib.Path(prefix).expanduser().resolve()
 
     processors: list[structlog.types.Processor] = (
@@ -122,27 +99,57 @@ def main(
         processors=processors,
     )
 
-    structlog.contextvars.reset_contextvars()
-    structlog.contextvars.bind_contextvars(
-        prefix=clone_prefix,
-        verbose=verbose,
-        debug=debug,
-        json=json,
-        no_act=no_act,
-        groups=len(groups),
-        oauth_token="*" * len(oauth_token),
-        base_url=base_url,
-    )
+    log = structlog.get_logger()
 
-    asyncio.run(
-        mainloop(
-            clone_prefix,
-            [Group(g) for g in groups],
-            oauth_token,
-            no_act,
-            base_url,
+    try:
+        if oauth_token is None:
+            # Fish for the token from the gh client config
+            gh_config_path = (
+                pathlib.Path("~/.config/gh/hosts.yml").expanduser().resolve()
+            )
+            if not gh_config_path.is_file():
+                raise ValueError(
+                    f"Neither CLONE_ALL_FROM_ORG_OAUTH_TOKEN is present in env nor {gh_config_path} readable from gh client."
+                )
+            host = urllib.parse.urlparse(base_url).hostname
+            if host is None:
+                raise ValueError(f"Can't figure out hostname from {base_url}")
+            with gh_config_path.open("rb") as fp:
+                gh_config = yaml.safe_load(fp)
+                if host not in gh_config and host.startswith("api."):
+                    # try dropping the api.
+                    host = host[len("api.") :]
+                try:
+                    oauth_token = gh_config[host]["oauth_token"]
+                except KeyError:
+                    raise ValueError(
+                        f"Can't find a valid oauth_token for {base_url} in {gh_config_path}, try a 'gh auth login' to authenticate or check your base url."
+                    )
+        structlog.contextvars.reset_contextvars()
+        structlog.contextvars.bind_contextvars(
+            prefix=clone_prefix,
+            verbose=verbose,
+            debug=debug,
+            json=json,
+            no_act=no_act,
+            groups=len(groups),
+            oauth_token="*" * len(oauth_token),
+            base_url=base_url,
         )
-    )
+        log.debug("main")
+        asyncio.run(
+            mainloop(
+                clone_prefix,
+                [Group(g) for g in groups],
+                oauth_token,
+                no_act,
+                base_url,
+            )
+        )
+    except Exception as e:
+        log.exception(f"Failed to clone repos: {e}", exc_info=debug or json, error=True)
+        raise typer.Exit(code=1)
+    log.info("Finished cloning repos", error=False)
 
 
 if __name__ == "__main__":
