@@ -119,5 +119,5 @@ async def clone_all_from_groups(
                 repo_url=repo_url,
                 no_act=no_act,
                 fetch=False,
-                prefix_path=clone_path,
+                prefix_path=prefix,
             )
